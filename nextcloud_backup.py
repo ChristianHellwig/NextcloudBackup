@@ -13,17 +13,18 @@ def main():
     ####################################################################
 
     #Source path info
-    source_directory =  r"/home/data/nextcloud_data"
-    database_directory = r"/var/lib/mysql/nextcloud_db"
+    source_directory =  r"/var/www/nextcloud_data"
+    database_directory = r"/var/lib/mysql/nextcloud"
+    config_directory = r"/var/www/nextcloud/config"
 
     #Target path info
-    target_base_directory = r"/home/data/nextcloud_backup"
-    log_directory = r"/home/data/nextcloud_backup/log"
+    target_base_directory = r"/disk1/nextcloud_backup"
+    log_directory = r"/disk1/nextcloud_backup_log"
 
     #Database (mysql) info
     database_username = "root"
-    database_password = "superSecretDbPassword"
-    database_name = "nextcloud_db"
+    database_password = "my_db_password"
+    database_name = "nextcloud"
     
     #Log info
     log_level = logging.WARNING
@@ -55,9 +56,10 @@ def main():
     #Get source directory sizes
     uncompressed_source_directory_size = get_directory_size(source_directory)  
     uncompressed_database_size = get_directory_size(database_directory)
+    uncompressed_config_directory_size = get_directory_size(config_directory)
 
     #Maximum space needed for backup + 10mb for safety
-    total_needed_space = uncompressed_source_directory_size + uncompressed_database_size + 10000000
+    total_needed_space = uncompressed_source_directory_size + uncompressed_database_size + + uncompressed_config_directory_size + 10000000
  
     #Remove old directories
     delete_old_directories(target_base_directory)
@@ -77,12 +79,16 @@ def main():
         return
 
     #Create Data-Zip
-    if create_data_backup(source_directory, target_directory) is False:
+    if create_data_backup(source_directory, target_directory, "data") is False:
         logging.error("Data backup failed")
 
     #Create sql dump
     if create_mysql_dump(database_username, database_password, database_name, target_directory) is False:
         logging.error("Database backup failed")
+
+    #Create Data-Zip
+    if create_data_backup(config_directory, target_directory, "config") is False:
+        logging.error("Config backup failed")
 
     #Remove empty log file
     if (os.stat(log_file).st_size == 0):
@@ -100,9 +106,9 @@ def create_mysql_dump(database_username, database_password, database_name, targe
         return False
 
 
-def create_data_backup(source_directory, target_directory):
+def create_data_backup(source_directory, target_directory, targetName):
     try:
-        shutil.make_archive(os.path.join(target_directory, "data"), 'zip', source_directory)
+        shutil.make_archive(os.path.join(target_directory, targetName), 'zip', source_directory)
         return True
     except Exception as e: 
         logging.error(str(e))
